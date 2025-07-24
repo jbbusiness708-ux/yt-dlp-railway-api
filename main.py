@@ -19,9 +19,17 @@ def download():
     try:
         output_path = f"{url.split('=')[-1]}.mp4"
         result = subprocess.run(
-            ['yt-dlp', '-f', 'bestaudio+best', '--merge-output-format', 'mp4', url, '-o', output_path],
+            [
+                'yt-dlp',
+                '--cookies', 'cookies.txt',
+                '-f', 'bestaudio+best',
+                '--merge-output-format', 'mp4',
+                url,
+                '-o', output_path
+            ],
             capture_output=True,
-            text=True
+            text=True,
+            cwd=os.path.dirname(os.path.abspath(__file__))  # ✅ Ensure it finds cookies.txt
         )
 
         if result.returncode != 0:
@@ -32,7 +40,7 @@ def download():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# 👇👇 This is the fix for Railway
+# ✅ Railway port fix
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port)
