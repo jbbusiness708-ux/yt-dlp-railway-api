@@ -1,27 +1,38 @@
 from flask import Flask, request, jsonify
-import subprocess, uuid
+import subprocess
+import os
 
 app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return 'Welcome to the yt-dlp API!'
 
 @app.route('/download', methods=['POST'])
 def download():
     data = request.get_json()
     url = data.get('url')
+
     if not url:
-        return jsonify({"error":"Missing URL"}), 400
+        return jsonify({'error': 'No URL provided'}), 400
 
-    filename = f"{uuid.uuid4()}.mp4"
     try:
-        subprocess.run([
-            "yt-dlp", "-f", "best[ext=mp4]",
-            "-o", filename, url
-        ], check=True)
-        return jsonify({
-            "status": "success",
-            "file_url": f"{request.host_url}{filename}"
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        output_path = f"{url.split('=')[-1]}.mp4"
+        result = subprocess.run(
+            ['yt-dlp', '-f', 'bestaudio+best', '--merge-output-format', 'mp4', url, '-o', output_path],
+            capture_output=True,
+            text=True
+        )
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3000)
+        if result.returncode != 0:
+            return jsonify({'error': 'Download failed', 'details': result.stderr}), 500
+
+        return jsonify({'message': 'Download successful', 'file': output_path})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 👇👇 This is the fix for Railway
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)
